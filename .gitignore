@@ -1,3 +1,20 @@
 env
 .env
 .venv/
+
+doc
+
+# misp
+*/misp/files
+*/misp/logs
+*/misp/ssl
+*/misp/server-configs
+
+# waf
+*/waf-honeypots/logs
+*/waf-honeypots/honeypot_logs
+*/waf-honeypots/rules
+*/waf-honeypots/plugins
+
+.DS_Store
+__pycache__
