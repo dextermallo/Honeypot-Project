@@ -121,8 +121,12 @@ def measure_single_ip_frequent_malicious_access() -> SecurityMeasure:
         passGateFn=ip_frequent_malicious_access_pass_gate_fn
     )
     
+    
+def measure_resource_limitation_for_frequent_request():
+    pass
+
 SECURITY_MEASURE_LIST = [
     measure_network_isolation_instance(),
+    measure_single_ip_frequent_malicious_access(),
     measure_restart_instance(),
-    measure_single_ip_frequent_malicious_access()
 ]

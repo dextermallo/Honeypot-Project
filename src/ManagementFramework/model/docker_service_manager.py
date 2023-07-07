@@ -100,5 +100,36 @@ class DockerServiceManager:
             )
         except Exception as e:
             logger.error(e)
-        
-    # export/archive/diff/update
+    
+    # 0=C (change), 1=A(add)
+    def diff_container(self, container_name: str) -> List[str]:
+        logger.info('start DockerServiceManager.diff_container')
+        try:
+            container = self.client.containers.get(container_name)
+            return container.diff()
+        except Exception as e:
+            logger.error(e)    
+    
+    # @TODO: test
+    def update_container(self, container_name: str, config: ContainerConfig):
+        logger.info('start DockerServiceManager.update_container')
+        try:
+            container = self.client.containers.get(container_name)
+            container.update(
+                mem_limit=config.mem_limit,
+                cpu_shares=config.cpu_shares,
+                blkio_weight=config.blkio_weight,
+                kernel_memory=config.kernel_memory,
+                restart_policy=config.restart_policy,
+            )
+        except Exception as e:
+            logger.error(e)
+
+    # @TODO: test
+    def export_container(self, container_name: str, path: str):
+        logger.info('start DockerServiceManager.export_container')
+        try:
+            container = self.client.containers.get(container_name)
+            container.export(path)
+        except Exception as e:
+            logger.error(e)

@@ -13,7 +13,8 @@ config = ContainerConfig(
         '/Users/dexter/Desktop/GitHub/Honeypot-Project/src/waf-honeypots/honeypot_config.json': { 'bind': '/honeypots/config.json', 'mode': 'rw' }
     },
     tty=True,
-    network=NETWORK_NAME
+    network=NETWORK_NAME,
+    
 )
 
 # DockerServiceManager().client.containers.run(
@@ -24,4 +25,5 @@ config = ContainerConfig(
 #     volumes=config.volumes,
 # )
 
-DockerServiceManager().recreate_container(HONEYPOT_CONTAINER_NAME, config)
+# DockerServiceManager().recreate_container(HONEYPOT_CONTAINER_NAME, config)
+# print(DockerServiceManager().diff_container(HONEYPOT_CONTAINER_NAME))

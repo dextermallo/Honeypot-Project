@@ -26,4 +26,8 @@ class ContainerConfig(BaseModel):
     read_only: Union[bool, None] = None
     
     # perf
+    blkio_weight: Union[int, None] = None
     mem_limit: Union[int, None] = None
+    cpu_shares: Union[int, None] = None
+    kernel_memory: Union[int, None] = None
+    restart_policy: Union[dict, None] = None

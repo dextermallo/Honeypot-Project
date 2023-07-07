@@ -14,7 +14,6 @@ class HoneypotManager:
     last_line: int
     globalCtx: GlobalCtx
 
-
     def __init__(self, crs_error_log_path: str) -> None:
         self.crs_error_log_path = crs_error_log_path
         self.last_modified = 0
@@ -57,7 +56,7 @@ class HoneypotManager:
         
         return None
     
-    
+ 
 if __name__ == '__main__':    
     error_log_path = '/Users/dexter/Desktop/GitHub/Honeypot-Project/src/waf-honeypots/logs/modsec3-nginx/error.log'
     honeypotManager = HoneypotManager(error_log_path)

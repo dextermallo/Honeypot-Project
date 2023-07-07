@@ -1,7 +1,24 @@
 {
     "cSpell.words": [
+        "blkio",
         "cgroupns",
+        "cpus",
+        "cpuset",
         "justsky",
+        "memswap",
         "pids"
-    ]
+    ],
+    "files.exclude": {
+        "**/.git": true,
+        "**/.svn": true,
+        "**/.hg": true,
+        "**/CVS": true,
+        "**/.DS_Store": true,
+        "**/Thumbs.db": true,
+        "mds_elk": true,
+        "misp-doc": true,
+        "mlogc_elk": true,
+        "honeytraps": true
+    },
+    "explorerExclude.backup": {}
 }
