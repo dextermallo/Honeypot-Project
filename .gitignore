@@ -16,3 +16,5 @@ doc
 
 .DS_Store
 __pycache__
+
+src_dep/*
