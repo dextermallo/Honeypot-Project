@@ -2,11 +2,15 @@
     "cSpell.words": [
         "blkio",
         "cgroupns",
+        "coraza",
+        "coreruleset",
         "cpus",
         "cpuset",
+        "Deque",
         "justsky",
         "memswap",
-        "pids"
+        "pids",
+        "txhttp"
     ],
     "files.exclude": {
         "**/.git": true,
