@@ -1,65 +1,59 @@
 package main
 
-import "fmt"
+import (
+	"time"
 
-type ISecurityMeasure interface {
-	inspect(logCtx *LogCtx, globalCtx *GlobalCtx)
-	exec() (bool, error)
-}
+	"github.com/dexter/owasp-honeypot/utils/container"
+	"github.com/dexter/owasp-honeypot/utils/logger"
+)
 
-type SMNetworkIsolation struct {
+type SecurityMeasure struct {
 	name        string
 	description string
-	passFn      func() (bool, error)
-	failFn      func() (bool, error)
-	passed      bool
+	passFn      func()
+	failFn      func()
+	inspect     func(logCtx *LogCtx, globalCtx *GlobalCtx) (bool, error)
 }
 
-func NewSMNetworkIsolation() *SMNetworkIsolation {
-	return &SMNetworkIsolation{
-		name:        "NetworkIsolation",
-		description: "NetworkIsolation",
-		passFn: func() (bool, error) {
-			fmt.Println("passedFn")
+var SecurityMeasureList = []SecurityMeasure{
+	{
+		name:        "NetworkIsolationByResource",
+		description: "Recent activity >= 10,000 && total isolation <= 10 => network isolation",
+		passFn:      nil,
+		failFn: func() {
+			logger.Info("Disconnecting service from honeypot network")
+			container.Disconnect(NETWORK_NAME, HONEYPOT_CONTAINER_NAME)
+			time.AfterFunc(30*time.Second, func() {
+				logger.Info("Service is back online")
+				container.Connect(NETWORK_NAME, HONEYPOT_CONTAINER_NAME)
+			})
+		},
+		inspect: func(lc *LogCtx, gc *GlobalCtx) (bool, error) {
+			if gc.getRecentActivityCnt() >= RECENT_ACTIVITY_THRESHOLD && gc.recentActivityBlockTime < RECENT_ACTIVITY_RESTART_UPPER_BOUND {
+				gc.recentActivityBlockTime += 1
+				logger.Info(gc.recentActivityBlockTime)
+				return false, nil
+			}
 			return true, nil
 		},
-		failFn: func() (bool, error) {
-			fmt.Println("failFn")
+	},
+	{
+		name:        "ResourceRestart",
+		description: "Recent activity >= 10,000 && total isolation > 10 => restart",
+		passFn:      nil,
+		failFn: func() {
+			container.Restart("honeypot")
+		},
+		inspect: func(lc *LogCtx, gc *GlobalCtx) (bool, error) {
+			if gc.getRecentActivityCnt() >= RECENT_ACTIVITY_THRESHOLD && gc.recentActivityBlockTime >= RECENT_ACTIVITY_RESTART_UPPER_BOUND {
+				return false, nil
+			}
 			return true, nil
 		},
-		passed: true,
-	}
+	},
 }
 
-// Resource usage >= 50% && total isolation < 3 => adjust resources
-// Resource usage >= 50% && total isolation <= 10 => network isolation
-// Resource usage >= 50% && total isolation > 10 => restart
 // total anomaly score += 100,000
 // distinct IP count += 10
 // total activity count += 1,000
 // then, check integrity
-
-func (sm *SMNetworkIsolation) inspect(logCtx *LogCtx, globalCtx *GlobalCtx) {
-	// check threshold
-
-	if globalCtx.inboundAccumulateScore >= 10 {
-		sm.passed = false
-	}
-
-	// if threshold is exceeded, run failFn
-	// else, run passFn if it exists
-}
-
-func (sm *SMNetworkIsolation) exec() (bool, error) {
-	fmt.Println("exec")
-	if sm.passed {
-		sm.passFn()
-	} else {
-		sm.failFn()
-	}
-	return true, nil
-}
-
-var SecurityMeasureList = []ISecurityMeasure{
-	NewSMNetworkIsolation(),
-}

@@ -6,6 +6,7 @@
         "coreruleset",
         "cpus",
         "cpuset",
+        "Datas",
         "Deque",
         "justsky",
         "memswap",
@@ -13,7 +14,7 @@
         "txhttp"
     ],
     "files.exclude": {
-        "**/.git": true,
+        "**/.git": false,
         "**/.svn": true,
         "**/.hg": true,
         "**/CVS": true,

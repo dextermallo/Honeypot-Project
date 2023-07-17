@@ -2,6 +2,10 @@ package main
 
 import (
 	"sync"
+	"time"
+
+	"github.com/dexter/owasp-honeypot/utils/logger"
+	"github.com/jellydator/ttlcache/v3"
 )
 
 type LogCtx struct {
@@ -35,46 +39,79 @@ type GlobalCtx struct {
 	ctx          map[string][]LogCtx
 
 	// action-related
+	invokeCnt map[int]int
 	blockList map[int]bool
+
+	// 5 minutes
+	recentActivityCnt       *ttlcache.Cache[string, int]
+	recentActivityBlockTime int
 }
 
 func NewGlobalCtx() *GlobalCtx {
 	return &GlobalCtx{
-		inboundAccumulateScore: 0,
-		activityCnt:            0,
-		ruleExecCnt:            0,
-		activityLock:           sync.Mutex{},
-		isLocked:               false,
-		curLogCtx:              NewLogCtx(),
-		distinctIPSet:          map[string]bool{},
-		blockList:              map[int]bool{},
-		ctx:                    map[string][]LogCtx{},
+		inboundAccumulateScore:  0,
+		activityCnt:             0,
+		ruleExecCnt:             0,
+		activityLock:            sync.Mutex{},
+		isLocked:                false,
+		curLogCtx:               NewLogCtx(),
+		distinctIPSet:           map[string]bool{},
+		invokeCnt:               map[int]int{},
+		ctx:                     map[string][]LogCtx{},
+		blockList:               map[int]bool{},
+		recentActivityCnt:       ttlcache.New(ttlcache.WithTTL[string, int](5 * time.Minute)),
+		recentActivityBlockTime: 0,
 	}
 }
 
-func (globalCtx *GlobalCtx) update(logCtx *LogCtx) {
-	globalCtx.isLocked = true
+func (gc *GlobalCtx) update(logCtx *LogCtx) {
+	logger.Debug("start globalCtx.update()")
+	gc.isLocked = true
 
-	globalCtx.inboundAccumulateScore += logCtx.totalScore
-	globalCtx.activityCnt += 1
-	globalCtx.ruleExecCnt += len(logCtx.ruleID)
-	globalCtx.distinctIPSet[logCtx.ip] = true
+	gc.inboundAccumulateScore += logCtx.totalScore
+	gc.activityCnt += 1
+	gc.ruleExecCnt += len(logCtx.ruleID)
+	gc.distinctIPSet[logCtx.ip] = true
 
-	if arr, ok := globalCtx.ctx[logCtx.ip]; !ok {
-		globalCtx.ctx[logCtx.ip] = []LogCtx{}
+	if arr, ok := gc.ctx[logCtx.ip]; !ok {
+		gc.ctx[logCtx.ip] = []LogCtx{}
 	} else {
 		if len(arr) >= MAX_MEM_RECORD_PER_IP {
 			arr = arr[1:]
 		}
-		arr = append(arr, *logCtx)
+		gc.ctx[logCtx.ip] = append(arr, *logCtx)
 	}
 
-	globalCtx.isLocked = false
-	globalCtx.curLogCtx = NewLogCtx()
+	if gc.recentActivityCnt.Get(logCtx.ip) == nil {
+		gc.recentActivityCnt.Set(logCtx.ip, 1, 5*time.Minute)
+	} else {
+		inc := gc.recentActivityCnt.Get(logCtx.ip)
+		gc.recentActivityCnt.Set(logCtx.ip, inc.Value()+1, 5*time.Minute)
+	}
+
+	gc.isLocked = false
+	gc.curLogCtx = NewLogCtx()
 }
 
-func (globalCtx *GlobalCtx) addBlockList(ruleList []int) {
+func (gc *GlobalCtx) updateBlockList(ruleList []int) (bool, error) {
 	for _, ruleID := range ruleList {
-		globalCtx.blockList[ruleID] = true
+		if _, isExist := gc.invokeCnt[ruleID]; isExist {
+			gc.invokeCnt[ruleID] += 1
+			if gc.invokeCnt[ruleID] >= BLOCKING_THRESHOLD {
+				gc.blockList[ruleID] = true
+			}
+		}
 	}
+
+	return true, nil
+}
+
+func (gc *GlobalCtx) getRecentActivityCnt() int {
+	cnt := 0
+
+	for _, item := range gc.recentActivityCnt.Items() {
+		cnt += item.Value()
+	}
+
+	return cnt
 }

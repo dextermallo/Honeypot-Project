@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"strconv"
@@ -12,32 +11,27 @@ import (
 	"github.com/corazawaf/coraza/v3"
 	txhttp "github.com/corazawaf/coraza/v3/http"
 	"github.com/corazawaf/coraza/v3/types"
+	logger "github.com/dexter/owasp-honeypot/utils/logger"
 )
 
 var globalCtx = NewGlobalCtx()
 
 func handler(w http.ResponseWriter, req *http.Request) {
+	logger.Debug("start handler()")
+
 	globalCtx.activityLock.Lock()
 
 	curLogCtx := globalCtx.curLogCtx
 	globalCtx.update(globalCtx.curLogCtx)
 
-	// fmt.Println(globalCtx.curLogCtx.ip)
-	// fmt.Println(globalCtx.curLogCtx.timestamp)
-	// fmt.Println(globalCtx.curLogCtx.ruleID)
-	// fmt.Println(globalCtx.curLogCtx.totalScore)
-
 	globalCtx.activityLock.Unlock()
-
-	fmt.Println(globalCtx.blockList)
-	fmt.Println(curLogCtx.ruleID)
 
 	for _, ruleID := range curLogCtx.ruleID {
 		if _, isExist := globalCtx.blockList[ruleID]; isExist {
-			fmt.Println("blocked by block list")
+			logger.Info("Request blocked by MTD, Blocked IP: " + curLogCtx.ip)
 
 			w.Header().Set("Content-Type", "text/plain")
-			resBody := "Hello world, transaction not disrupted."
+			resBody := "Transaction not disrupted."
 
 			w.WriteHeader(http.StatusForbidden)
 			w.Write([]byte(resBody))
@@ -45,11 +39,41 @@ func handler(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	globalCtx.addBlockList(curLogCtx.ruleID)
+	globalCtx.updateBlockList(curLogCtx.ruleID)
 
 	for _, securityMeasure := range SecurityMeasureList {
-		securityMeasure.inspect(curLogCtx, globalCtx)
-		defer securityMeasure.exec()
+		passInspection, err := securityMeasure.inspect(curLogCtx, globalCtx)
+
+		if err != nil {
+			logger.Error(err.Error())
+			continue
+		}
+
+		if passInspection {
+			logger.Info("Request passed inspection: " + securityMeasure.name)
+			if securityMeasure.passFn != nil {
+				go securityMeasure.passFn()
+
+				w.Header().Set("Content-Type", "text/plain")
+				resBody := "Transaction not disrupted."
+
+				w.WriteHeader(http.StatusForbidden)
+				w.Write([]byte(resBody))
+				return
+			}
+		} else {
+			logger.Info("Request failed inspection: " + securityMeasure.name)
+			if securityMeasure.failFn != nil {
+				go securityMeasure.failFn()
+
+				w.Header().Set("Content-Type", "text/plain")
+				resBody := "Transaction not disrupted."
+
+				w.WriteHeader(http.StatusForbidden)
+				w.Write([]byte(resBody))
+				return
+			}
+		}
 	}
 
 	url := "http://localhost:80"
@@ -98,10 +122,18 @@ func copyHeaders(dest http.Header, src http.Header) {
 }
 
 func main() {
+	logger.SetLogLevel(logger.DebugLevel)
+	logger.SetOutputMode(true)
+
+	logger.Debug("Initialize services")
+
+	// start TTL cache
+	go globalCtx.recentActivityCnt.Start()
+
 	waf := createWAF()
+
 	http.Handle("/", txhttp.WrapHandler(waf, http.HandlerFunc(handler)))
-	fmt.Println("Server is running. Listening port: 8090")
-	log.Fatal(http.ListenAndServe(":8090", nil))
+	logger.Fatal(http.ListenAndServe(":8080", nil))
 }
 
 func createWAF() coraza.WAF {
@@ -119,7 +151,7 @@ func createWAF() coraza.WAF {
 	)
 
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal(err)
 	}
 	return waf
 }

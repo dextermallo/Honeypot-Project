@@ -14,7 +14,18 @@ const MAX_INBOUND_ACCUMULATE_SCORE = 1e9
 const MAX_OUTBOUND_ACCUMULATE_SCORE = 1e9
 
 // container-related
-const HONEYPOT_CONTAINER_NAME = "honeypots"
-const NETWORK_NAME = "waf-honeypots_default"
+const HONEYPOT_CONTAINER_NAME = "honeypot"
+const NETWORK_NAME = "distributed-honeypot"
 
+// security-measure-related
 var RULE_WHITE_LIST = map[int]bool{949110: true, 949111: true}
+
+const BLOCKING_THRESHOLD = 3
+
+var DIFF_HONEYPOT_IGNORED_LIST = []string{
+	"/usr/local/lib/python3.10",
+	"/tmp",
+}
+
+const RECENT_ACTIVITY_RESTART_UPPER_BOUND = 10
+const RECENT_ACTIVITY_THRESHOLD = 10000
