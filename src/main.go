@@ -122,10 +122,10 @@ func copyHeaders(dest http.Header, src http.Header) {
 }
 
 func main() {
-	logger.SetLogLevel(logger.DebugLevel)
+	logger.SetLogLevel(logger.InfoLevel)
 	logger.SetOutputMode(true)
 
-	logger.Debug("Initialize services")
+	logger.Info("Initialize services")
 
 	// start TTL cache
 	go globalCtx.recentActivityCnt.Start()

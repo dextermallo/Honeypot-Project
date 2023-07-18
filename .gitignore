@@ -18,3 +18,4 @@ doc
 __pycache__
 
 src_dep/*
+logs

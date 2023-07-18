@@ -42,9 +42,14 @@ type GlobalCtx struct {
 	invokeCnt map[int]int
 	blockList map[int]bool
 
-	// 5 minutes
+	// recent activity
 	recentActivityCnt       *ttlcache.Cache[string, int]
 	recentActivityBlockTime int
+
+	// record
+	prevActivityCntInterval int
+	prevDistinctIPInterval  int
+	prevTotalScoreInterval  int
 }
 
 func NewGlobalCtx() *GlobalCtx {
@@ -61,6 +66,9 @@ func NewGlobalCtx() *GlobalCtx {
 		blockList:               map[int]bool{},
 		recentActivityCnt:       ttlcache.New(ttlcache.WithTTL[string, int](5 * time.Minute)),
 		recentActivityBlockTime: 0,
+		prevActivityCntInterval: 0,
+		prevDistinctIPInterval:  0,
+		prevTotalScoreInterval:  0,
 	}
 }
 

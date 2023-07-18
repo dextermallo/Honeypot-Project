@@ -25,7 +25,14 @@ const BLOCKING_THRESHOLD = 3
 var DIFF_HONEYPOT_IGNORED_LIST = []string{
 	"/usr/local/lib/python3.10",
 	"/tmp",
+	"/usr/local$",
+	"/usr/local/lib$",
+	"/usr$",
 }
 
 const RECENT_ACTIVITY_RESTART_UPPER_BOUND = 10
 const RECENT_ACTIVITY_THRESHOLD = 10000
+
+const ACTIVITY_COUNT_CHECK_INTERVAL = 1000
+const DISTINCT_IP_CHECK_INTERVAL = 10
+const TOTAL_SCORE_CHECK_INTERVAL = 100000

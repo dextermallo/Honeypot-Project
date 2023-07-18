@@ -9,7 +9,11 @@ import (
 
 	"github.com/dexter/owasp-honeypot/utils/logger"
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/client"
+	"github.com/docker/go-connections/nat"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 var (
@@ -89,19 +93,18 @@ func Connect(networkID string, containerID string) error {
 	return nil
 }
 
-func Diff(containerName string, ignoredRegexList []string) error {
+func Diff(containerName string, ignoredRegexList []string) ([]interface{}, error) {
 	logger.Debug("start container.Diff()")
 
 	ctx := context.Background()
 
 	changes, err := svcClient.ContainerDiff(ctx, containerName)
+	res := []interface{}{}
 
 	if err != nil {
 		logger.Error(err.Error())
-		return err
+		return res, err
 	}
-
-	res := []interface{}{}
 
 	for _, change := range changes {
 
@@ -109,7 +112,6 @@ func Diff(containerName string, ignoredRegexList []string) error {
 
 		for _, regex := range ignoredRegexList {
 			pattern := regexp.MustCompile(regex)
-
 			if pattern.MatchString(change.Path) {
 				excluded = true
 				break
@@ -121,8 +123,7 @@ func Diff(containerName string, ignoredRegexList []string) error {
 		}
 	}
 
-	fmt.Println(res)
-	return nil
+	return res, nil
 }
 
 func Restart(containerName string) error {
@@ -163,6 +164,57 @@ func GetStats(containerName string) types.StatsJSON {
 	}
 
 	return res
+}
+
+func FullRestart(containerName string) error {
+	logger.Debug("start container.FullRestart()")
+
+	return nil
+}
+
+func CreateHoneypot() error {
+	logger.Info("start container.Create()")
+	ctx := context.Background()
+
+	_, err := svcClient.ContainerCreate(
+		ctx,
+		&container.Config{
+			Image:        "justsky/honeypots",
+			Tty:          true,
+			Cmd:          []string{"--setup", "all"},
+			ExposedPorts: nat.PortSet{"80/tcp": struct{}{}},
+		},
+		&container.HostConfig{
+			NetworkMode: container.NetworkMode("distributed-honeypot"),
+			Mounts: []mount.Mount{
+				{
+					Type:   mount.TypeBind,
+					Source: "/Users/dexter/Desktop/GitHub/Honeypot-Project/logs/honeypot",
+					Target: "/honeypots/logs",
+				},
+				{
+					Type:   mount.TypeBind,
+					Source: "/Users/dexter/Desktop/GitHub/Honeypot-Project/src/honeypot_config.json",
+					Target: "/honeypots/config.json",
+				},
+			},
+		},
+		nil,
+		&v1.Platform{},
+		"honeypot")
+
+	if err != nil {
+		logger.Error(err.Error())
+		return err
+	}
+
+	err = svcClient.ContainerStart(ctx, "honeypot", types.ContainerStartOptions{})
+
+	if err != nil {
+		logger.Error(err.Error())
+		return err
+	}
+	return nil
 }
 
 // func CalculateCPUUsage(stats *types.StatsJSON) float64 {
