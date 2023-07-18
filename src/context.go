@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dexter/owasp-honeypot/utils/logger"
+	"github.com/dextermallo/owasp-honeypot/utils/logger"
 	"github.com/jellydator/ttlcache/v3"
 )
 

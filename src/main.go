@@ -11,7 +11,7 @@ import (
 	"github.com/corazawaf/coraza/v3"
 	txhttp "github.com/corazawaf/coraza/v3/http"
 	"github.com/corazawaf/coraza/v3/types"
-	logger "github.com/dexter/owasp-honeypot/utils/logger"
+	"github.com/dextermallo/owasp-honeypot/utils/logger"
 )
 
 var globalCtx = NewGlobalCtx()

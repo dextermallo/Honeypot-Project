@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/dexter/owasp-honeypot/utils/logger"
+	"github.com/dextermallo/owasp-honeypot/utils/logger"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"

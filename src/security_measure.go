@@ -3,8 +3,8 @@ package main
 import (
 	"time"
 
-	"github.com/dexter/owasp-honeypot/utils/container"
-	"github.com/dexter/owasp-honeypot/utils/logger"
+	"github.com/dextermallo/owasp-honeypot/utils/container"
+	"github.com/dextermallo/owasp-honeypot/utils/logger"
 )
 
 type SecurityMeasure struct {
