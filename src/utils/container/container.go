@@ -2,10 +2,8 @@ package container
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"regexp"
-	"time"
 
 	"github.com/dextermallo/owasp-honeypot/utils/logger"
 	"github.com/docker/docker/api/types"
@@ -27,6 +25,21 @@ func init() {
 	if err != nil {
 		fmt.Printf("Unable to create docker client: %s", err)
 	}
+}
+
+func IsRunning(containerID string) (bool, error) {
+	logger.Debug("start container.IsRunning()")
+
+	ctx := context.Background()
+
+	inspect, err := svcClient.ContainerInspect(ctx, containerID)
+
+	if err != nil {
+		logger.Error(err.Error())
+		return false, err
+	}
+
+	return inspect.State.Running, nil
 }
 
 // Stop and remove a container
@@ -141,74 +154,57 @@ func Restart(containerName string) error {
 	return nil
 }
 
-func GetStats(containerName string) types.StatsJSON {
-	logger.Debug("start container.getStats()")
-
-	duration := 5 * time.Second
-	ctx, cancel := context.WithTimeout(context.Background(), duration)
-	defer cancel()
-
-	stats, err := svcClient.ContainerStats(ctx, containerName, false)
-	if err != nil {
-		logger.Fatal(err)
-	}
-
-	defer stats.Body.Close()
-	var res types.StatsJSON
-
-	dec := json.NewDecoder(stats.Body)
-	err = dec.Decode(&res)
-
-	if err != nil {
-		logger.Fatal(err)
-	}
-
-	return res
-}
-
-func FullRestart(containerName string) error {
-	logger.Debug("start container.FullRestart()")
-
-	return nil
-}
-
-func CreateHoneypot() error {
+func CreateHoneypot(id string, networkID string) error {
 	logger.Info("start container.Create()")
 	ctx := context.Background()
+	HOME_DIR := "/Users/dexter"
+
+	if isRunning, _ := IsRunning("honeypot-" + id); isRunning {
+		logger.Info("Container is already running")
+		Remove("honeypot-" + id)
+	}
 
 	_, err := svcClient.ContainerCreate(
 		ctx,
 		&container.Config{
 			Image:        "justsky/honeypots",
 			Tty:          true,
-			Cmd:          []string{"--setup", "all"},
-			ExposedPorts: nat.PortSet{"80/tcp": struct{}{}},
+			Cmd:          []string{"--setup", "http,https"},
+			ExposedPorts: nat.PortSet{"80/tcp": struct{}{}, "443/tcp": struct{}{}},
 		},
 		&container.HostConfig{
-			NetworkMode: container.NetworkMode("distributed-honeypot"),
+			NetworkMode: container.NetworkMode(networkID),
 			Mounts: []mount.Mount{
 				{
 					Type:   mount.TypeBind,
-					Source: "/Users/dexter/Desktop/GitHub/Honeypot-Project/logs/honeypot",
+					Source: HOME_DIR + "/log/honeypot/" + id,
 					Target: "/honeypots/logs",
 				},
-				{
-					Type:   mount.TypeBind,
-					Source: "/Users/dexter/Desktop/GitHub/Honeypot-Project/src/honeypot_config.json",
-					Target: "/honeypots/config.json",
+			},
+			PortBindings: nat.PortMap{
+				"80/tcp": []nat.PortBinding{
+					{
+						HostPort: "800" + id,
+					},
+				},
+				"443/tcp": []nat.PortBinding{
+					{
+						HostPort: "4430" + id,
+					},
 				},
 			},
 		},
 		nil,
 		&v1.Platform{},
-		"honeypot")
+		"honeypot-"+id,
+	)
 
 	if err != nil {
 		logger.Error(err.Error())
 		return err
 	}
 
-	err = svcClient.ContainerStart(ctx, "honeypot", types.ContainerStartOptions{})
+	err = svcClient.ContainerStart(ctx, "honeypot-"+id, types.ContainerStartOptions{})
 
 	if err != nil {
 		logger.Error(err.Error())
@@ -216,19 +212,3 @@ func CreateHoneypot() error {
 	}
 	return nil
 }
-
-// func CalculateCPUUsage(stats *types.StatsJSON) float64 {
-// 	logger.Debug("start container.CalculateCPUUsage()")
-
-// 	cpuDelta := float64(stats.CPUStats.CPUUsage.TotalUsage - stats.PreCPUStats.CPUUsage.TotalUsage)
-// 	systemDelta := float64(stats.CPUStats.SystemUsage - stats.PreCPUStats.SystemUsage)
-
-// 	core := float64(len(stats.CPUStats.CPUUsage.PercpuUsage))
-
-// 	if core == 0 {
-// 		core = 1
-// 	}
-
-// 	cpuUsage := (cpuDelta / systemDelta) * core * 100.0
-// 	return cpuUsage
-// }

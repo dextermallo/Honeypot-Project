@@ -123,3 +123,21 @@ func (gc *GlobalCtx) getRecentActivityCnt() int {
 
 	return cnt
 }
+
+type HoneypotService struct {
+	id        string
+	endpoint  string
+	globalCtx *GlobalCtx
+	network   string
+	prefix    string
+}
+
+func NewHoneypotService(id string, endpoint string, network string, prefix string) *HoneypotService {
+	return &HoneypotService{
+		id:        id,
+		endpoint:  endpoint,
+		globalCtx: NewGlobalCtx(),
+		network:   network,
+		prefix:    prefix,
+	}
+}

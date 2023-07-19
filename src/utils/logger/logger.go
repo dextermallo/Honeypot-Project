@@ -23,7 +23,7 @@ var (
 )
 
 func init() {
-	file, err := os.Create("coraza.log")
+	file, err := os.OpenFile("coraza.log", os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
 	if err != nil {
 		log.Fatal(err)
 	}

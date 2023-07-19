@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -14,20 +13,21 @@ import (
 	"github.com/dextermallo/owasp-honeypot/utils/logger"
 )
 
-var globalCtx = NewGlobalCtx()
+var curHoneypotService *HoneypotService
 
-func handler(w http.ResponseWriter, req *http.Request) {
+func handler(w http.ResponseWriter, req *http.Request, honeypotService *HoneypotService) {
 	logger.Debug("start handler()")
 
-	globalCtx.activityLock.Lock()
+	curHoneypotService = honeypotService
+	honeypotService.globalCtx.activityLock.Lock()
 
-	curLogCtx := globalCtx.curLogCtx
-	globalCtx.update(globalCtx.curLogCtx)
+	curLogCtx := honeypotService.globalCtx.curLogCtx
+	honeypotService.globalCtx.update(honeypotService.globalCtx.curLogCtx)
 
-	globalCtx.activityLock.Unlock()
+	honeypotService.globalCtx.activityLock.Unlock()
 
 	for _, ruleID := range curLogCtx.ruleID {
-		if _, isExist := globalCtx.blockList[ruleID]; isExist {
+		if _, isExist := honeypotService.globalCtx.blockList[ruleID]; isExist {
 			logger.Info("Request blocked by MTD, Blocked IP: " + curLogCtx.ip)
 
 			w.Header().Set("Content-Type", "text/plain")
@@ -39,10 +39,10 @@ func handler(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	globalCtx.updateBlockList(curLogCtx.ruleID)
+	honeypotService.globalCtx.updateBlockList(curLogCtx.ruleID)
 
 	for _, securityMeasure := range SecurityMeasureList {
-		passInspection, err := securityMeasure.inspect(curLogCtx, globalCtx)
+		passInspection, err := securityMeasure.inspect(curLogCtx, honeypotService)
 
 		if err != nil {
 			logger.Error(err.Error())
@@ -52,7 +52,7 @@ func handler(w http.ResponseWriter, req *http.Request) {
 		if passInspection {
 			logger.Info("Request passed inspection: " + securityMeasure.name)
 			if securityMeasure.passFn != nil {
-				go securityMeasure.passFn()
+				go securityMeasure.passFn(honeypotService)
 
 				w.Header().Set("Content-Type", "text/plain")
 				resBody := "Transaction not disrupted."
@@ -64,7 +64,7 @@ func handler(w http.ResponseWriter, req *http.Request) {
 		} else {
 			logger.Info("Request failed inspection: " + securityMeasure.name)
 			if securityMeasure.failFn != nil {
-				go securityMeasure.failFn()
+				go securityMeasure.failFn(honeypotService)
 
 				w.Header().Set("Content-Type", "text/plain")
 				resBody := "Transaction not disrupted."
@@ -76,7 +76,7 @@ func handler(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	url := "http://localhost:80"
+	url := honeypotService.endpoint
 	client := &http.Client{}
 
 	// Create a new request based on the incoming request
@@ -113,6 +113,12 @@ func handler(w http.ResponseWriter, req *http.Request) {
 	w.Write(body)
 }
 
+func handlerWrapper(honeypotService *HoneypotService) func(w http.ResponseWriter, req *http.Request) {
+	return func(w http.ResponseWriter, req *http.Request) {
+		handler(w, req, honeypotService)
+	}
+}
+
 func copyHeaders(dest http.Header, src http.Header) {
 	for key, values := range src {
 		for _, value := range values {
@@ -122,21 +128,30 @@ func copyHeaders(dest http.Header, src http.Header) {
 }
 
 func main() {
-	logger.SetLogLevel(logger.InfoLevel)
+	logger.SetLogLevel(logger.WarningLevel)
 	logger.SetOutputMode(true)
-
 	logger.Info("Initialize services")
 
-	// start TTL cache
-	go globalCtx.recentActivityCnt.Start()
+	honeypotServices := []*HoneypotService{
+		NewHoneypotService("1", "http://localhost:8001/", "distributed-honeypot", "/public"),
+		NewHoneypotService("2", "http://localhost:8002/", "distributed-honeypot", "/private"),
+	}
 
 	waf := createWAF()
 
-	http.Handle("/", txhttp.WrapHandler(waf, http.HandlerFunc(handler)))
-	logger.Fatal(http.ListenAndServe(":8080", nil))
+	for _, honeypotService := range honeypotServices {
+		go honeypotService.globalCtx.recentActivityCnt.Start()
+		http.Handle(honeypotService.prefix, txhttp.WrapHandler(waf, http.HandlerFunc(handlerWrapper(honeypotService))))
+	}
+
+	curHoneypotService = honeypotServices[0]
+
+	logger.Fatal(http.ListenAndServe(":80", nil))
 }
 
 func createWAF() coraza.WAF {
+	logger.Debug("start createWAF()")
+
 	directivesFile := "./default.conf"
 	if s := os.Getenv("DIRECTIVES_FILE"); s != "" {
 		directivesFile = s
@@ -157,13 +172,13 @@ func createWAF() coraza.WAF {
 }
 
 func logError(error types.MatchedRule) {
-	for globalCtx.isLocked {
-		fmt.Println("sleeping")
+	for curHoneypotService.globalCtx.isLocked {
+		logger.Debug("isLocked: " + strconv.FormatBool(curHoneypotService.globalCtx.isLocked))
 		time.Sleep(5 * time.Second)
 	}
 
-	if globalCtx.curLogCtx.ip == "" {
-		globalCtx.curLogCtx.ip = error.ClientIPAddress()
+	if curHoneypotService.globalCtx.curLogCtx.ip == "" {
+		curHoneypotService.globalCtx.curLogCtx.ip = error.ClientIPAddress()
 	}
 
 	ruleId := error.Rule().ID()
@@ -171,13 +186,13 @@ func logError(error types.MatchedRule) {
 		for _, data := range error.MatchedDatas() {
 			if data.Key() == "blocking_inbound_anomaly_score" {
 				score, _ := strconv.Atoi(data.Value())
-				globalCtx.curLogCtx.totalScore = score
+				curHoneypotService.globalCtx.curLogCtx.totalScore = score
 				break
 			}
 		}
 	}
 
 	if _, isExist := RULE_WHITE_LIST[ruleId]; !isExist {
-		globalCtx.curLogCtx.ruleID = append(globalCtx.curLogCtx.ruleID, ruleId)
+		curHoneypotService.globalCtx.curLogCtx.ruleID = append(curHoneypotService.globalCtx.curLogCtx.ruleID, ruleId)
 	}
 }

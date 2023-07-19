@@ -13,10 +13,6 @@ const MAX_IP_ACCESSED = 100
 const MAX_INBOUND_ACCUMULATE_SCORE = 1e9
 const MAX_OUTBOUND_ACCUMULATE_SCORE = 1e9
 
-// container-related
-const HONEYPOT_CONTAINER_NAME = "honeypot"
-const NETWORK_NAME = "distributed-honeypot"
-
 // security-measure-related
 var RULE_WHITE_LIST = map[int]bool{949110: true, 949111: true}
 
