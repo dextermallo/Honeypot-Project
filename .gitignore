@@ -23,3 +23,5 @@ logs
 *.pem
 
 coraza.log
+cover.*
+*.cov

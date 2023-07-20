@@ -26,5 +26,6 @@
         "mlogc_elk": true,
         "honeytraps": true
     },
-    "explorerExclude.backup": {}
+    "explorerExclude.backup": {},
+    "go.testTimeout": "300s"
 }

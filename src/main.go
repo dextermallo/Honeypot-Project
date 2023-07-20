@@ -3,7 +3,6 @@ package main
 import (
 	"io/ioutil"
 	"net/http"
-	"os"
 	"strconv"
 	"time"
 
@@ -130,7 +129,7 @@ func copyHeaders(dest http.Header, src http.Header) {
 	}
 }
 
-func main() {
+func buildService() {
 	logger.SetLogLevel(logger.WarningLevel)
 	logger.SetOutputMode(true)
 	logger.Info("Initialize services")
@@ -151,7 +150,10 @@ func main() {
 	http.Handle("/", txhttp.WrapHandler(waf, http.HandlerFunc(handlerWrapper(honeypotServices[0]))))
 
 	curHoneypotService = honeypotServices[0]
+}
 
+func main() {
+	buildService()
 	logger.Fatal(http.ListenAndServe(":80", nil))
 }
 
@@ -159,9 +161,6 @@ func createWAF() coraza.WAF {
 	logger.Debug("start createWAF()")
 
 	directivesFile := "./default.conf"
-	if s := os.Getenv("DIRECTIVES_FILE"); s != "" {
-		directivesFile = s
-	}
 
 	waf, err := coraza.NewWAF(
 		coraza.NewWAFConfig().

@@ -103,11 +103,13 @@ func (gc *GlobalCtx) update(logCtx *LogCtx) {
 
 func (gc *GlobalCtx) updateBlockList(ruleList []int) (bool, error) {
 	for _, ruleID := range ruleList {
-		if _, isExist := gc.invokeCnt[ruleID]; isExist {
-			gc.invokeCnt[ruleID] += 1
-			if gc.invokeCnt[ruleID] >= BLOCKING_THRESHOLD {
-				gc.blockList[ruleID] = true
-			}
+		if _, isExist := gc.invokeCnt[ruleID]; !isExist {
+			gc.invokeCnt[ruleID] = 0
+		}
+
+		gc.invokeCnt[ruleID] += 1
+		if gc.invokeCnt[ruleID] >= BLOCKING_THRESHOLD {
+			gc.blockList[ruleID] = true
 		}
 	}
 

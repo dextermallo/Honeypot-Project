@@ -60,12 +60,7 @@ func Remove(containerID string) error {
 		containerID,
 		types.ContainerRemoveOptions{})
 
-	if err != nil {
-		logger.Error(err.Error())
-		return err
-	}
-
-	return nil
+	return err
 }
 
 func Disconnect(networkID string, containerID string) error {
@@ -79,12 +74,7 @@ func Disconnect(networkID string, containerID string) error {
 		containerID,
 		true)
 
-	if err != nil {
-		logger.Error(err.Error())
-		return err
-	}
-
-	return nil
+	return err
 }
 
 func Connect(networkID string, containerID string) error {
@@ -98,12 +88,7 @@ func Connect(networkID string, containerID string) error {
 		containerID,
 		nil)
 
-	if err != nil {
-		logger.Error(err.Error())
-		return err
-	}
-
-	return nil
+	return err
 }
 
 func Diff(containerName string, ignoredRegexList []string) ([]interface{}, error) {
@@ -137,21 +122,6 @@ func Diff(containerName string, ignoredRegexList []string) ([]interface{}, error
 	}
 
 	return res, nil
-}
-
-func Restart(containerName string) error {
-	logger.Debug("start container.Restart()")
-
-	ctx := context.Background()
-
-	err := svcClient.ContainerRestart(ctx, containerName, nil)
-
-	if err != nil {
-		logger.Error(err.Error())
-		return err
-	}
-
-	return nil
 }
 
 func CreateHoneypot(id string, networkID string) error {
@@ -201,9 +171,5 @@ func CreateHoneypot(id string, networkID string) error {
 
 	err = svcClient.ContainerStart(ctx, "honeypot-"+id, types.ContainerStartOptions{})
 
-	if err != nil {
-		logger.Error(err.Error())
-		return err
-	}
-	return nil
+	return err
 }
