@@ -18,6 +18,9 @@ var curHoneypotService *HoneypotService
 func handler(w http.ResponseWriter, req *http.Request, honeypotService *HoneypotService) {
 	logger.Debug("start handler()")
 
+	// add client ip to header for honeypot
+	req.Header.Set("X-Forwarded-For", req.RemoteAddr)
+
 	curHoneypotService = honeypotService
 	honeypotService.globalCtx.activityLock.Lock()
 
