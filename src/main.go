@@ -144,6 +144,9 @@ func main() {
 		http.Handle(honeypotService.prefix, txhttp.WrapHandler(waf, http.HandlerFunc(handlerWrapper(honeypotService))))
 	}
 
+	// force bind first honeypot with prefix "/"
+	http.Handle("/", txhttp.WrapHandler(waf, http.HandlerFunc(handlerWrapper(honeypotServices[0]))))
+
 	curHoneypotService = honeypotServices[0]
 
 	logger.Fatal(http.ListenAndServe(":80", nil))
