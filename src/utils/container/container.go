@@ -169,8 +169,8 @@ func CreateHoneypot(id string, networkID string) error {
 		&container.Config{
 			Image:        "justsky/honeypots",
 			Tty:          true,
-			Cmd:          []string{"--setup", "http,https"},
-			ExposedPorts: nat.PortSet{"80/tcp": struct{}{}, "443/tcp": struct{}{}},
+			Cmd:          []string{"--setup", "http"},
+			ExposedPorts: nat.PortSet{"80/tcp": struct{}{}},
 		},
 		&container.HostConfig{
 			NetworkMode: container.NetworkMode(networkID),
@@ -185,11 +185,6 @@ func CreateHoneypot(id string, networkID string) error {
 				"80/tcp": []nat.PortBinding{
 					{
 						HostPort: "800" + id,
-					},
-				},
-				"443/tcp": []nat.PortBinding{
-					{
-						HostPort: "4430" + id,
 					},
 				},
 			},

@@ -21,3 +21,5 @@ src_dep/*
 logs
 
 *.pem
+
+coraza.log
