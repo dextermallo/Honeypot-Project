@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/corazawaf/coraza/v3"
@@ -13,6 +14,7 @@ import (
 )
 
 var curHoneypotService *HoneypotService
+var SMLock = sync.Mutex{}
 
 func handler(w http.ResponseWriter, req *http.Request, honeypotService *HoneypotService) {
 	logger.Debug("start handler()")
@@ -41,8 +43,13 @@ func handler(w http.ResponseWriter, req *http.Request, honeypotService *Honeypot
 		}
 	}
 
+	if len(curLogCtx.ruleID) > 0 {
+		logger.Warning("Violated Rules Detected: ", curLogCtx.ruleID)
+	}
+
 	honeypotService.globalCtx.updateBlockList(curLogCtx.ruleID)
 
+	SMLock.Lock()
 	for _, securityMeasure := range SecurityMeasureList {
 		passInspection, err := securityMeasure.inspect(curLogCtx, honeypotService)
 
@@ -64,7 +71,7 @@ func handler(w http.ResponseWriter, req *http.Request, honeypotService *Honeypot
 				return
 			}
 		} else {
-			logger.Info("Request failed inspection: " + securityMeasure.name)
+			logger.Warning("Request failed inspection: " + securityMeasure.name)
 			if securityMeasure.failFn != nil {
 				go securityMeasure.failFn(honeypotService)
 
@@ -77,6 +84,7 @@ func handler(w http.ResponseWriter, req *http.Request, honeypotService *Honeypot
 			}
 		}
 	}
+	SMLock.Unlock()
 
 	url := honeypotService.endpoint
 	client := &http.Client{}
@@ -132,7 +140,7 @@ func copyHeaders(dest http.Header, src http.Header) {
 func buildService() {
 	logger.SetLogLevel(logger.WarningLevel)
 	logger.SetOutputMode(true)
-	logger.Info("Initialize services")
+	logger.Warning("Initialize services")
 
 	honeypotServices := []*HoneypotService{
 		NewHoneypotService("1", "http://localhost:8001/", "distributed-honeypot", "/public"),

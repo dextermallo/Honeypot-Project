@@ -22,9 +22,9 @@ var SecurityMeasureList = []SecurityMeasure{
 		description: "Recent activity >= 10,000 && total isolation <= 10 => network isolation",
 		passFn:      nil,
 		failFn: func(honeypotService *HoneypotService) {
-			logger.Info("Disconnecting service from honeypot network" + honeypotService.id)
+			logger.Warning("Disconnecting service from honeypot network" + honeypotService.id)
 			container.Disconnect(honeypotService.id, honeypotService.network)
-			time.AfterFunc(30*time.Second, func() {
+			time.AfterFunc(10*time.Second, func() {
 				logger.Info("Service is back online")
 				container.Connect(honeypotService.network, honeypotService.id)
 			})
@@ -44,6 +44,7 @@ var SecurityMeasureList = []SecurityMeasure{
 		description: "Recent activity >= 10,000 && total isolation > 10 => restart",
 		passFn:      nil,
 		failFn: func(honeypotService *HoneypotService) {
+			logger.Warning("Restarting service")
 			err := container.CreateHoneypot(honeypotService.id, honeypotService.network)
 			if err != nil {
 				logger.Error(err.Error())
@@ -62,6 +63,7 @@ var SecurityMeasureList = []SecurityMeasure{
 		description: "Periodically check on activity count",
 		passFn:      nil,
 		failFn: func(honeypotService *HoneypotService) {
+			logger.Warning("Restarting service")
 			err := container.CreateHoneypot(honeypotService.id, honeypotService.network)
 			if err != nil {
 				logger.Error(err.Error())
@@ -93,6 +95,7 @@ var SecurityMeasureList = []SecurityMeasure{
 		description: "Periodically check on IP count",
 		passFn:      nil,
 		failFn: func(honeypotService *HoneypotService) {
+			logger.Warning("Restarting service")
 			err := container.CreateHoneypot(honeypotService.id, honeypotService.network)
 			if err != nil {
 				logger.Error(err.Error())
@@ -124,6 +127,7 @@ var SecurityMeasureList = []SecurityMeasure{
 		description: "Periodically check on total score",
 		passFn:      nil,
 		failFn: func(honeypotService *HoneypotService) {
+			logger.Warning("Restarting service")
 			err := container.CreateHoneypot(honeypotService.id, honeypotService.network)
 			if err != nil {
 				logger.Error(err.Error())
