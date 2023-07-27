@@ -22,34 +22,41 @@ func handler(w http.ResponseWriter, req *http.Request, honeypotService *Honeypot
 	// add client ip to header for honeypot
 	req.Header.Set("X-Forwarded-For", req.RemoteAddr)
 
+	// switch the current honeypot for handling the request on the correct honeypot
 	curHoneypotService = honeypotService
+
+	// lock for concurrent access
 	honeypotService.globalCtx.activityLock.Lock()
 
+	// update the current log context
 	curLogCtx := honeypotService.globalCtx.curLogCtx
 	honeypotService.globalCtx.update(honeypotService.globalCtx.curLogCtx)
 
 	honeypotService.globalCtx.activityLock.Unlock()
 
-	for _, ruleID := range curLogCtx.ruleID {
-		if _, isExist := honeypotService.globalCtx.blockList[ruleID]; isExist {
-			logger.Info("Request blocked by MTD, Blocked IP: " + curLogCtx.ip)
+	// @TODO: remove experiment for MTD
+	// for _, ruleID := range curLogCtx.ruleID {
+	// 	if _, isExist := honeypotService.globalCtx.blockList[ruleID]; isExist {
+	// 		logger.Warning("Request blocked by MTD, Blocked IP: " + curLogCtx.ip)
 
-			w.Header().Set("Content-Type", "text/plain")
-			resBody := "Transaction not disrupted."
+	// 		w.Header().Set("Content-Type", "text/plain")
+	// 		resBody := "Transaction not disrupted."
 
-			w.WriteHeader(http.StatusForbidden)
-			w.Write([]byte(resBody))
-			return
-		}
-	}
+	// 		w.WriteHeader(http.StatusForbidden)
+	// 		w.Write([]byte(resBody))
+	// 		return
+	// 	}
+	// }
+
+	honeypotService.globalCtx.updateBlockList(curLogCtx.ruleID)
 
 	if len(curLogCtx.ruleID) > 0 {
 		logger.Warning("Violated Rules Detected: ", curLogCtx.ruleID)
 	}
 
-	honeypotService.globalCtx.updateBlockList(curLogCtx.ruleID)
-
+	// lock for security measure concurrent processing
 	SMLock.Lock()
+
 	for _, securityMeasure := range SecurityMeasureList {
 		passInspection, err := securityMeasure.inspect(curLogCtx, honeypotService)
 
@@ -58,6 +65,7 @@ func handler(w http.ResponseWriter, req *http.Request, honeypotService *Honeypot
 			continue
 		}
 
+		// whether pass or not, a fake response will be returned to speed up the process
 		if passInspection {
 			logger.Info("Request passed inspection: " + securityMeasure.name)
 			if securityMeasure.passFn != nil {
@@ -86,6 +94,7 @@ func handler(w http.ResponseWriter, req *http.Request, honeypotService *Honeypot
 	}
 	SMLock.Unlock()
 
+	// if none of the security measure is triggered, forward the request to the target server
 	url := honeypotService.endpoint
 	client := &http.Client{}
 
@@ -142,21 +151,25 @@ func buildService() {
 	logger.SetOutputMode(true)
 	logger.Warning("Initialize services")
 
+	// create honeypot services
 	honeypotServices := []*HoneypotService{
 		NewHoneypotService("1", "http://localhost:8001/", "distributed-honeypot", "/public"),
 		NewHoneypotService("2", "http://localhost:8002/", "distributed-honeypot", "/private"),
 	}
 
+	// create waf
 	waf := createWAF()
 
+	// attach data analysis function
 	for _, honeypotService := range honeypotServices {
 		go honeypotService.globalCtx.recentActivityCnt.Start()
 		http.Handle(honeypotService.prefix, txhttp.WrapHandler(waf, http.HandlerFunc(handlerWrapper(honeypotService))))
 	}
 
-	// force bind first honeypot with prefix "/"
+	// force binding: when accessing with '/', the request will be forwarded to the first service
 	http.Handle("/", txhttp.WrapHandler(waf, http.HandlerFunc(handlerWrapper(honeypotServices[0]))))
 
+	// set the current honeypot service for request handler
 	curHoneypotService = honeypotServices[0]
 }
 
@@ -168,12 +181,11 @@ func main() {
 func createWAF() coraza.WAF {
 	logger.Debug("start createWAF()")
 
-	directivesFile := "./default.conf"
-
+	// set ip Coraza with CRS
 	waf, err := coraza.NewWAF(
 		coraza.NewWAFConfig().
 			WithErrorCallback(logError).
-			WithDirectivesFromFile(directivesFile).
+			WithDirectivesFromFile("./default.conf").
 			WithDirectivesFromFile("./coreruleset/rules/*.conf").
 			WithDirectivesFromFile("./coraza.conf"),
 	)
@@ -194,6 +206,7 @@ func logError(error types.MatchedRule) {
 		curHoneypotService.globalCtx.curLogCtx.ip = error.ClientIPAddress()
 	}
 
+	// capture total score from CRS
 	ruleId := error.Rule().ID()
 	if ruleId == 949110 || ruleId == 949111 {
 		for _, data := range error.MatchedDatas() {

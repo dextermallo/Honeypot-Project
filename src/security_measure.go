@@ -18,34 +18,33 @@ type SecurityMeasure struct {
 
 var SecurityMeasureList = []SecurityMeasure{
 	{
-		name:        "NetworkIsolationByResource",
-		description: "Recent activity >= 10,000 && total isolation <= 10 => network isolation",
+		name:        "NetworkIsolationByRecentActivity",
+		description: "Recent activity >= 10,000 && total isolation < RECENT_ACTIVITY_RESTART_UPPER_BOUND",
 		passFn:      nil,
 		failFn: func(honeypotService *HoneypotService) {
 			logger.Warning("Disconnecting service from honeypot network" + honeypotService.id)
-			container.Disconnect(honeypotService.id, honeypotService.network)
+			container.Disconnect(honeypotService.network, "honeypot-"+honeypotService.id)
 			time.AfterFunc(10*time.Second, func() {
 				logger.Info("Service is back online")
-				container.Connect(honeypotService.network, honeypotService.id)
+				container.Connect(honeypotService.network, "honeypot-"+honeypotService.id)
 			})
 		},
 		inspect: func(lc *LogCtx, honeypotService *HoneypotService) (bool, error) {
 			gc := honeypotService.globalCtx
 			if gc.getRecentActivityCnt() >= RECENT_ACTIVITY_THRESHOLD && gc.recentActivityBlockTime < RECENT_ACTIVITY_RESTART_UPPER_BOUND {
 				gc.recentActivityBlockTime += 1
-				logger.Info(gc.recentActivityBlockTime)
 				return false, nil
 			}
 			return true, nil
 		},
 	},
 	{
-		name:        "ResourceRestart",
-		description: "Recent activity >= 10,000 && total isolation > 10 => restart",
+		name:        "RestartByRecentActivity",
+		description: "Recent activity >= 10,000 && total isolation > 100 => RECENT_ACTIVITY_RESTART_UPPER_BOUND",
 		passFn:      nil,
 		failFn: func(honeypotService *HoneypotService) {
 			logger.Warning("Restarting service")
-			err := container.CreateHoneypot(honeypotService.id, honeypotService.network)
+			err := container.Restart("honeypot-" + honeypotService.id)
 			if err != nil {
 				logger.Error(err.Error())
 			}
@@ -63,8 +62,8 @@ var SecurityMeasureList = []SecurityMeasure{
 		description: "Periodically check on activity count",
 		passFn:      nil,
 		failFn: func(honeypotService *HoneypotService) {
-			logger.Warning("Restarting service")
-			err := container.CreateHoneypot(honeypotService.id, honeypotService.network)
+			logger.Warning("Reinstall Honeypot")
+			err := container.ReinstallHoneypot(honeypotService.id, honeypotService.network)
 			if err != nil {
 				logger.Error(err.Error())
 			}
@@ -95,8 +94,8 @@ var SecurityMeasureList = []SecurityMeasure{
 		description: "Periodically check on IP count",
 		passFn:      nil,
 		failFn: func(honeypotService *HoneypotService) {
-			logger.Warning("Restarting service")
-			err := container.CreateHoneypot(honeypotService.id, honeypotService.network)
+			logger.Warning("Reinstall Honeypot")
+			err := container.ReinstallHoneypot(honeypotService.id, honeypotService.network)
 			if err != nil {
 				logger.Error(err.Error())
 			}
@@ -127,8 +126,8 @@ var SecurityMeasureList = []SecurityMeasure{
 		description: "Periodically check on total score",
 		passFn:      nil,
 		failFn: func(honeypotService *HoneypotService) {
-			logger.Warning("Restarting service")
-			err := container.CreateHoneypot(honeypotService.id, honeypotService.network)
+			logger.Warning("Reinstall Honeypot")
+			err := container.ReinstallHoneypot(honeypotService.id, honeypotService.network)
 			if err != nil {
 				logger.Error(err.Error())
 			}

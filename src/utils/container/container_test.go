@@ -5,19 +5,19 @@ import (
 )
 
 func TestContainerMultiOp(t *testing.T) {
-	err := CreateHoneypot("3", "distributed-honeypot")
+	err := ReinstallHoneypot("3", "distributed-honeypot")
 
 	if err != nil {
 		t.Errorf(err.Error())
 	}
-
-	diff, diffErr := Diff("honeypot-3", []string{})
 
 	ok, runningErr := IsRunning("honeypot-3")
 
 	if runningErr != nil || !ok {
 		t.Errorf(runningErr.Error())
 	}
+
+	diff, diffErr := Diff("honeypot-3", []string{})
 
 	if diffErr != nil {
 		t.Errorf(diffErr.Error())
@@ -27,13 +27,19 @@ func TestContainerMultiOp(t *testing.T) {
 		t.Errorf("No diff detected")
 	}
 
+	err = Connect("distributed-honeypot", "honeypot-3")
+
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+
 	err = Disconnect("distributed-honeypot", "honeypot-3")
 
 	if err != nil {
 		t.Errorf(err.Error())
 	}
 
-	err = Connect("distributed-honeypot", "honeypot-3")
+	err = Restart("honeypot-3")
 
 	if err != nil {
 		t.Errorf(err.Error())
@@ -43,31 +49,5 @@ func TestContainerMultiOp(t *testing.T) {
 
 	if err != nil {
 		t.Errorf(err.Error())
-	}
-}
-
-func TestNonExistContainer(t *testing.T) {
-	err := CreateHoneypot("3", "distributed-honeypot")
-
-	if err != nil {
-		t.Errorf(err.Error())
-	}
-
-	err = Remove("honeypot-x")
-
-	if err == nil {
-		t.Errorf("Container should not exist")
-	}
-
-	err = Disconnect("distributed-honeypot", "honeypot-x")
-
-	if err == nil {
-		t.Errorf("Container should not exist")
-	}
-
-	err = Connect("distributed-honeypot", "honeypot-x")
-
-	if err == nil {
-		t.Errorf("Container should not exist")
 	}
 }

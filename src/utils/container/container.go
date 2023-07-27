@@ -29,9 +29,7 @@ func init() {
 
 func IsRunning(containerID string) (bool, error) {
 	logger.Debug("start container.IsRunning()")
-
 	ctx := context.Background()
-
 	inspect, err := svcClient.ContainerInspect(ctx, containerID)
 
 	if err != nil {
@@ -42,53 +40,36 @@ func IsRunning(containerID string) (bool, error) {
 	return inspect.State.Running, nil
 }
 
-// Stop and remove a container
+func Restart(containerName string) error {
+	logger.Debug("start container.Restart()")
+	ctx := context.Background()
+	err := svcClient.ContainerRestart(ctx, containerName, nil)
+	return err
+}
+
 func Remove(containerID string) error {
 	logger.Debug("start container.Remove()")
 
 	ctx := context.Background()
-
 	err := svcClient.ContainerStop(ctx, containerID, nil)
 
 	if err != nil {
-		logger.Error(err.Error())
 		return err
 	}
 
-	err = svcClient.ContainerRemove(
-		ctx,
-		containerID,
-		types.ContainerRemoveOptions{})
-
-	return err
+	return svcClient.ContainerRemove(ctx, containerID, types.ContainerRemoveOptions{})
 }
 
 func Disconnect(networkID string, containerID string) error {
 	logger.Debug("start container.Disconnect()")
-
 	ctx := context.Background()
-
-	err := svcClient.NetworkDisconnect(
-		ctx,
-		networkID,
-		containerID,
-		true)
-
-	return err
+	return svcClient.NetworkDisconnect(ctx, networkID, containerID, true)
 }
 
 func Connect(networkID string, containerID string) error {
 	logger.Debug("start container.Connect()")
-
 	ctx := context.Background()
-
-	err := svcClient.NetworkConnect(
-		ctx,
-		networkID,
-		containerID,
-		nil)
-
-	return err
+	return svcClient.NetworkConnect(ctx, networkID, containerID, nil)
 }
 
 func Diff(containerName string, ignoredRegexList []string) ([]interface{}, error) {
@@ -105,9 +86,7 @@ func Diff(containerName string, ignoredRegexList []string) ([]interface{}, error
 	}
 
 	for _, change := range changes {
-
 		excluded := false
-
 		for _, regex := range ignoredRegexList {
 			pattern := regexp.MustCompile(regex)
 			if pattern.MatchString(change.Path) {
@@ -124,7 +103,7 @@ func Diff(containerName string, ignoredRegexList []string) ([]interface{}, error
 	return res, nil
 }
 
-func CreateHoneypot(id string, networkID string) error {
+func ReinstallHoneypot(id string, networkID string) error {
 	logger.Info("start container.Create()")
 	ctx := context.Background()
 	HOME_DIR := "/Users/dexter"
@@ -170,6 +149,5 @@ func CreateHoneypot(id string, networkID string) error {
 	}
 
 	err = svcClient.ContainerStart(ctx, "honeypot-"+id, types.ContainerStartOptions{})
-
 	return err
 }

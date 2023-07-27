@@ -25,3 +25,4 @@ logs
 coraza.log
 cover.*
 *.cov
+data/*

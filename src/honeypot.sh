@@ -1,6 +1,5 @@
+# create network
 # docker network create distributed-honeypot
-
-docker kill $(docker ps -aq) && docker rm $(docker ps -aq)
 
 docker run -i -d \
     -p 8001:80 \
@@ -9,6 +8,7 @@ docker run -i -d \
     -v ~/log/honeypot/1/:/honeypots/logs \
     justsky/honeypots --setup http
 
+# create second honeypot
 docker run -i -d \
     -p 8002:80 \
     --network distributed-honeypot \

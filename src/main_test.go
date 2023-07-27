@@ -33,10 +33,9 @@ func doGetRequest(t *testing.T, getPath string) int {
 
 func TestServer(t *testing.T) {
 	server := setup(t)
-	defer server.Close()
 
-	if doGetRequest(t, server.URL+"/public") != http.StatusOK {
-		t.Errorf("GET /public should return 200")
+	if doGetRequest(t, server.URL+"/") != http.StatusOK {
+		t.Errorf("GET / should return 200")
 	}
 
 	for i := 0; i < 10; i++ {
@@ -44,4 +43,13 @@ func TestServer(t *testing.T) {
 			t.Errorf("GET /?param='><script>alert(1)</script> should return 200")
 		}
 	}
+
+	violation_list := []int{941100, 941110, 941160, 941390}
+	for _, violation := range violation_list {
+		if curHoneypotService.globalCtx.invokeCnt[violation] != 10 {
+			t.Errorf("%d should be invoked once", violation)
+		}
+	}
+
+	server.Close()
 }
