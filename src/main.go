@@ -97,7 +97,7 @@ func handler(w http.ResponseWriter, req *http.Request, honeypotService *Honeypot
 	SMLock.Unlock()
 
 	// if none of the security measure is triggered, forward the request to the target server
-	url := honeypotService.endpoint
+	url := honeypotService.endpoint + req.URL.RawQuery
 	client := &http.Client{}
 
 	// Create a new request based on the incoming request
@@ -149,7 +149,7 @@ func copyHeaders(dest http.Header, src http.Header) {
 }
 
 func buildService() {
-	logger.SetLogLevel(logger.DebugLevel)
+	logger.SetLogLevel(logger.WarningLevel)
 	logger.SetOutputMode(true)
 	logger.Warning("Initialize services")
 
