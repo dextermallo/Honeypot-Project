@@ -76,6 +76,7 @@ func handler(w http.ResponseWriter, req *http.Request, honeypotService *Honeypot
 
 				w.WriteHeader(http.StatusForbidden)
 				w.Write([]byte(resBody))
+				SMLock.Unlock()
 				return
 			}
 		} else {
@@ -88,6 +89,7 @@ func handler(w http.ResponseWriter, req *http.Request, honeypotService *Honeypot
 
 				w.WriteHeader(http.StatusForbidden)
 				w.Write([]byte(resBody))
+				SMLock.Unlock()
 				return
 			}
 		}
@@ -147,7 +149,7 @@ func copyHeaders(dest http.Header, src http.Header) {
 }
 
 func buildService() {
-	logger.SetLogLevel(logger.WarningLevel)
+	logger.SetLogLevel(logger.DebugLevel)
 	logger.SetOutputMode(true)
 	logger.Warning("Initialize services")
 
