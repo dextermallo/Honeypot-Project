@@ -155,8 +155,8 @@ func buildService() {
 
 	// create honeypot services
 	honeypotServices := []*HoneypotService{
-		NewHoneypotService("1", "http://localhost:8001/", "distributed-honeypot", "/public"),
-		NewHoneypotService("2", "http://localhost:8002/", "distributed-honeypot", "/private"),
+		NewHoneypotService("1", "http://localhost:8001/", "distributed-honeypot", "/admin"),
+		NewHoneypotService("2", "http://localhost:8002/", "distributed-honeypot", "/login"),
 	}
 
 	// create waf
