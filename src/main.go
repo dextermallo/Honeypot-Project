@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -21,6 +22,9 @@ func handler(w http.ResponseWriter, req *http.Request, honeypotService *Honeypot
 
 	// add client ip to header for honeypot
 	req.Header.Set("X-Forwarded-For", req.RemoteAddr)
+
+	// rewrite ip address
+	honeypotService.globalCtx.curLogCtx.ip = strings.Split(req.RemoteAddr, ":")[0]
 
 	// switch the current honeypot for handling the request on the correct honeypot
 	curHoneypotService = honeypotService
