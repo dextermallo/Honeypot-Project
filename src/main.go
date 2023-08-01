@@ -56,6 +56,7 @@ func handler(w http.ResponseWriter, req *http.Request, honeypotService *Honeypot
 
 	if len(curLogCtx.ruleID) > 0 {
 		logger.Warning("Violated Rules Detected: ", curLogCtx.ruleID)
+		logger.Warning("Total Score: ", curLogCtx.totalScore)
 	}
 
 	// lock for security measure concurrent processing
@@ -71,7 +72,7 @@ func handler(w http.ResponseWriter, req *http.Request, honeypotService *Honeypot
 
 		// whether pass or not, a fake response will be returned to speed up the process
 		if passInspection {
-			logger.Info("Request passed inspection: " + securityMeasure.name)
+			logger.Debug("Request passed inspection: " + securityMeasure.name)
 			if securityMeasure.passFn != nil {
 				go securityMeasure.passFn(honeypotService)
 
@@ -155,7 +156,7 @@ func copyHeaders(dest http.Header, src http.Header) {
 func buildService() {
 	logger.SetLogLevel(logger.WarningLevel)
 	logger.SetOutputMode(true)
-	logger.Warning("Initialize services")
+	logger.Info("Initialize services")
 
 	// create honeypot services
 	honeypotServices := []*HoneypotService{
