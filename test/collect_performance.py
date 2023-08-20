@@ -154,20 +154,20 @@ class TestCase:
             self.command = big_query_command.format(n=n, c=c, port=port.value)
         elif type is TestType.malicious:
             self.command = malicious_command.format(n=n, c=c, port=port.value)
-        
+
         self.command += f" > ./data/{self.name}.txt"
 
 class Collector():
-    
+
     __honeypot_name = "honeypot-1"
-    
+
     def collect(self, test_case: TestCase):
         print("start collect()")
         self.__start_cadvisor()
 
         proc_data_collector = subprocess.Popen([test_case.command], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         proc_data_collector.wait()
-        
+
         data_list, timestamp_set = [], set()
         url = f"http://127.0.0.1:8080/api/v1.1/subcontainers/docker/{self.__get_waf_container_id()}"
 
@@ -190,8 +190,8 @@ class Collector():
         --privileged \
         --device=/dev/kmsg \
         gcr.io/cadvisor/cadvisor:v0.45.0
-        """    
-        
+        """
+
         subprocess.run(cmd, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
         cnt = 0
@@ -232,7 +232,7 @@ class Collector():
         with open(dist_path, "w+") as file:
             json.dump(data, file, indent=2, cls=cls)
         file.close()
-    
+
     def container_is_healthy(self, name_or_id: str):
         print("start container_is_healthy()")
         return docker.from_env().api.inspect_container(name_or_id)["State"]["Status"] == 'running'
@@ -245,11 +245,11 @@ test_case_list = [
         TestCase(TestType.ping, 100, 10, Service.server),
         TestCase(TestType.malicious, 100, 10, Service.server),
         TestCase(TestType.big_query, 100, 10, Service.server),
-        
+
         TestCase(TestType.ping, 1000, 100, Service.proxy),
         TestCase(TestType.malicious, 1000, 100, Service.proxy),
         TestCase(TestType.big_query, 1000, 100, Service.proxy),
-        
+
         TestCase(TestType.ping, 1000, 100, Service.server),
         TestCase(TestType.malicious, 1000, 100, Service.server),
         TestCase(TestType.big_query, 1000, 100, Service.server),
@@ -257,7 +257,7 @@ test_case_list = [
         TestCase(TestType.ping, 10000, 100, Service.proxy),
         TestCase(TestType.malicious, 10000, 100, Service.proxy),
         TestCase(TestType.big_query, 10000, 100, Service.proxy),
-        
+
         TestCase(TestType.ping, 10000, 100, Service.server),
         TestCase(TestType.malicious, 10000, 100, Service.server),
         TestCase(TestType.big_query, 10000, 100, Service.server),

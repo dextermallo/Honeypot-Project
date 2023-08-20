@@ -489,6 +489,19 @@ dev = ["pre-commit", "tox"]
 testing = ["pytest", "pytest-benchmark"]
 
 [[package]]
+name = "pycountry"
+version = "22.3.5"
+description = "ISO country, subdivision, language, currency and script definitions and their translations"
+optional = false
+python-versions = ">=3.6, <4"
+files = [
+    {file = "pycountry-22.3.5.tar.gz", hash = "sha256:b2163a246c585894d808f18783e19137cb70a0c18fb36748dc01fc6f109c1646"},
+]
+
+[package.dependencies]
+setuptools = "*"
+
+[[package]]
 name = "pycparser"
 version = "2.21"
 description = "C parser in Python"
@@ -711,4 +724,4 @@ testing = ["coverage (>=5.0.3)", "zope.event", "zope.testing"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "54ebcc50239fde3e629c2fd6a5cc349bdfaa9bae6ca039ff6956a1a991f1e288"
+content-hash = "b6f1f43d60940e8a72c39316dfcd1cf5bdade00330dfdfdb536beff3cd595e62"
