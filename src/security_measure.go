@@ -16,6 +16,9 @@ type SecurityMeasure struct {
 	inspect     func(logCtx *LogCtx, honeypotService *HoneypotService) (bool, error)
 }
 
+// due to the limitation of cAdvisor and docker service API,
+// Security control for CPU/memory will rely on the host.
+// In production, monitors are set on Azure
 var SecurityMeasureList = []SecurityMeasure{
 	{
 		name:        "NetworkIsolationByRecentActivity",
